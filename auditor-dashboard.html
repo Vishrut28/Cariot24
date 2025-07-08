@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CARS24 - Auditor Dashboard</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="style.css" rel="stylesheet">
+</head>
+<body>
+    <div class="admin-container">
+        <header class="admin-header">
+            <div class="header-content">
+                <h1 class="dashboard-title">
+                    <i class="fas fa-clipboard-check"></i>
+                    Auditor Dashboard
+                </h1>
+                <div class="header-right">
+                    <span id="user-email"></span>
+                    <button class="logout-btn" onclick="logout()">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="admin-main">
+            <!-- Progress Section -->
+            <section class="stats-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-chart-line"></i> Audit Progress</h2>
+                    <button class="refresh-btn" onclick="loadStats()">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card blue">
+                        <div class="stat-icon"><i class="fas fa-video"></i></div>
+                        <div class="stat-content">
+                            <h3>Total Audits</h3>
+                            <div class="stat-number" id="total-audits">Loading...</div>
+                        </div>
+                    </div>
+                    <div class="stat-card purple">
+                        <div class="stat-icon"><i class="fas fa-clock"></i></div>
+                        <div class="stat-content">
+                            <h3>Pending</h3>
+                            <div class="stat-number" id="pending-audits">Loading...</div>
+                        </div>
+                    </div>
+                    <div class="stat-card green">
+                        <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+                        <div class="stat-content">
+                            <h3>Approved</h3>
+                            <div class="stat-number" id="approved-audits">Loading...</div>
+                        </div>
+                    </div>
+                    <div class="stat-card red">
+                        <div class="stat-icon"><i class="fas fa-times-circle"></i></div>
+                        <div class="stat-content">
+                            <h3>Rejected</h3>
+                            <div class="stat-number" id="rejected-audits">Loading...</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Pending Audits Section -->
+            <section class="table-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-video"></i> Pending Video Audits</h2>
+                    <button class="refresh-btn" onclick="loadPendingAudits()">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                </div>
+                <div class="table-container">
+                    <table class="modern-table">
+                        <thead>
+                            <tr>
+                                <th>Car Reg. No.</th>
+                                <th>Hub</th>
+                                <th>Cleaning Date</th>
+                                <th>Submission Date</th>
+                                <th>Ground Worker</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pending-audits-table">
+                            <tr><td colspan="6" class="loading">Loading pending audits...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- All Audits Section -->
+            <section class="table-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-history"></i> All Video Audits</h2>
+                    <button class="refresh-btn" onclick="loadAllAudits()">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                </div>
+                <div class="table-container">
+                    <table class="modern-table">
+                        <thead>
+                            <tr>
+                                <th>Car Reg. No.</th>
+                                <th>Hub</th>
+                                <th>Audit Date</th>
+                                <th>Status</th>
+                                <th>Rating</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="all-audits-table">
+                            <tr><td colspan="6" class="loading">Loading all audits...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Video Audit Modal -->
+    <div class="modal fade" id="videoAuditModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-video"></i> 
+                        Video Audit - <span id="modal-reg-no"></span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <!-- Video Players Section -->
+                        <div class="col-12 mb-4">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-car"></i> Exterior Video</h6>
+                                    <div class="video-container">
+                                        <video id="exterior-video" controls width="100%" height="300">
+                                            <p>Your browser doesn't support HTML5 video.</p>
+                                        </video>
+                                        <div id="exterior-error" class="video-error" style="display: none;">
+                                            <i class="fas fa-exclamation-triangle"></i>
+                                            Exterior video not available
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-couch"></i> Interior Video</h6>
+                                    <div class="video-container">
+                                        <video id="interior-video" controls width="100%" height="300">
+                                            <p>Your browser doesn't support HTML5 video.</p>
+                                        </video>
+                                        <div id="interior-error" class="video-error" style="display: none;">
+                                            <i class="fas fa-exclamation-triangle"></i>
+                                            Interior video not available
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Audit Details Section -->
+                        <div class="col-12">
+                            <div class="audit-details">
+                                <div class="row mb-3">
+                                    <div class="col-md-4">
+                                        <strong>Hub Location:</strong>
+                                        <div id="modal-hub"></div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <strong>Cleaning Date:</strong>
+                                        <div id="modal-cleaning-date"></div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <strong>Ground Worker:</strong>
+                                        <div id="modal-user-email"></div>
+                                    </div>
+                                </div>
+
+                                <!-- Rating Section -->
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">
+                                            <strong>Quality Rating (1-5 stars):</strong>
+                                        </label>
+                                        <div class="star-rating">
+                                            <i class="fas fa-star" data-rating="1"></i>
+                                            <i class="fas fa-star" data-rating="2"></i>
+                                            <i class="fas fa-star" data-rating="3"></i>
+                                            <i class="fas fa-star" data-rating="4"></i>
+                                            <i class="fas fa-star" data-rating="5"></i>
+                                        </div>
+                                        <select class="form-select mt-2" id="rating-select">
+                                            <option value="">Select Rating</option>
+                                            <option value="1">1 - Poor</option>
+                                            <option value="2">2 - Fair</option>
+                                            <option value="3">3 - Good</option>
+                                            <option value="4">4 - Very Good</option>
+                                            <option value="5">5 - Excellent</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">
+                                            <strong>Audit Decision:</strong>
+                                        </label>
+                                        <select class="form-select" id="audit-status" required>
+                                            <option value="">Select Decision</option>
+                                            <option value="approved">✅ Approve</option>
+                                            <option value="rejected">❌ Reject</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- Comments Section -->
+                                <div class="row mb-3">
+                                    <div class="col-12">
+                                        <label class="form-label">
+                                            <strong>Audit Comments:</strong>
+                                        </label>
+                                        <textarea class="form-control" id="audit-notes" rows="4" 
+                                                placeholder="Enter detailed feedback about the cleaning quality, issues found, or recommendations..."></textarea>
+                                        <div class="form-text">
+                                            <span id="comment-count">0</span>/500 characters
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                    <button type="button" class="btn btn-primary" id="submit-audit" onclick="submitAudit()">
+                        <i class="fas fa-check"></i> Submit Audit
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let currentAuditId = null;
+        let selectedRating = 0;
+
+        // Load user info and initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            loadUserInfo();
+            loadStats();
+            loadPendingAudits();
+            loadAllAudits();
+            initializeRatingSystem();
+            initializeCommentCounter();
+        });
+
+        function loadUserInfo() {
+            fetch('/user-info')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('user-email').textContent = data.email;
+                })
+                .catch(error => {
+                    console.error('Error loading user info:', error);
+                });
+        }
+
+        function loadStats() {
+            fetch('/audit-stats')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('total-audits').textContent = data.total;
+                    document.getElementById('pending-audits').textContent = data.pending;
+                    document.getElementById('approved-audits').textContent = data.approved;
+                    document.getElementById('rejected-audits').textContent = data.rejected;
+                })
+                .catch(error => {
+                    console.error('Error loading stats:', error);
+                    document.getElementById('total-audits').textContent = 'Error';
+                    document.getElementById('pending-audits').textContent = 'Error';
+                    document.getElementById('approved-audits').textContent = 'Error';
+                    document.getElementById('rejected-audits').textContent = 'Error';
+                });
+        }
+
+        function loadPendingAudits() {
+            fetch('/pending-audits')
+                .then(response => response.json())
+                .then(data => {
+                    const tbody = document.getElementById('pending-audits-table');
+                    if (data.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="6" class="no-data">No pending audits</td></tr>';
+                        return;
+                    }
+
+                    tbody.innerHTML = data.map(audit => `
+                        <tr>
+                       i> Review
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('');
+                })
+                .catch(error => {
+                    console.error('Error loading pending audits:', error);
+                    document.getElementById('pending-audits-table').innerHTML = 
+                        '<tr><td colspan="6" class="error">Error loading data</td></tr>';
+                });
+        }
+
+        function loadAllAudits() {
+            fetch('/all-audits')
+                .then(response => response.json())
+                .then(data => {
+                    const tbody = document.getElementById('all-audits-table');
+                    if (data.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="6" class="no-data">No audits found</td></tr>';
+                        return;
+                    }
+
+                    tbody.innerHTML = data.map(audit => `
+                        <tr>
+                            <td><strong>${audit.reg_no}</strong></td>
+                            <td><span class="location-badge">${audit.hub_location}</span></td>
+                            <td>${new Date(audit.audit_date).toLocaleDateString()}</td>
+                            <td>
+                                <span class="badge bg-${getStatusColor(audit.status)}">${audit.status}</span>
+                            </td>
+                            <td>
+                                ${audit.audit_rating ? '⭐'.repeat(audit.audit_rating) : 'N/A'}
+                            </td>
+                            <td>
+                                <button class="btn btn-info btn-sm" onclick="openAuditModal(${audit.id})">
+                                    <i class="fas fa-eye"></i> View
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('');
+                })
+                .catch(error => {
+                    console.error('Error loading all audits:', error);
+                    document.getElementById('all-audits-table').innerHTML = 
+                        '<tr><td colspan="6" class="error">Error loading data</td></tr>';
+                });
+        }
+
+        function getStatusColor(status) {
+            switch(status) {
+                case 'approved': return 'success';
+                case 'rejected': return 'danger';
+                case 'pending': return 'warning';
+                default: return 'secondary';
+            }
+        }
+
+        function openAuditModal(auditId) {
+            currentAuditId = auditId;
+            
+            // Load audit details
+            fetch(`/audit-video-info/${auditId}`)
+                .then(response => response.json())
+                .then(data => {
+                    // Populate modal fields
+                    document.getElementById('modal-reg-no').textContent = data.reg_no;
+                    document.getElementById('modal-hub').textContent = data.hub_location;
+                    document.getElementById('modal-cleaning-date').textContent = new Date(data.cleaning_date).toLocaleDateString();
+                    document.getElementById('modal-user-email').textContent = data.user_email;
+                    
+                    // Load videos
+                    loadVideo('exterior', auditId, data.exterior_video_available);
+                    loadVideo('interior', auditId, data.interior_video_available);
+                    
+                    // If existing audit, populate fields
+                    if (data.audit_rating) {
+                        setRating(data.audit_rating);
+                        document.getElementById('rating-select').value = data.audit_rating;
+                    }
+                    if (data.audit_status && data.audit_status !== 'pending') {
+                        document.getElementById('audit-status').value = data.audit_status;
+                    }
+                    if (data.audit_notes) {
+                        document.getElementById('audit-notes').value = data.audit_notes;
+                    }
+                    
+                    // Show modal
+                    new bootstrap.Modal(document.getElementById('videoAuditModal')).show();
+                })
+                .catch(error => {
+                    console.error('Error loading audit details:', error);
+                    alert('Error loading audit details');
+                });
+        }
+
+        function loadVideo(type, auditId, available) {
+            const video = document.getElementById(`${type}-video`);
+            const error = document.getElementById(`${type}-error`);
+            
+            if (!available) {
+                video.style.display = 'none';
+                error.style.display = 'block';
+                return;
+            }
+            
+            video.style.display = 'block';
+            error.style.display = 'none';
+            video.src = `/video/${type}/${auditId}`;
+            
+            video.onerror = function() {
+                video.style.display = 'none';
+                error.style.display = 'block';
+            };
+        }
+
+        function initializeRatingSystem() {
+            const stars = document.querySelectorAll('.star-rating i');
+            const ratingSelect = document.getElementById('rating-select');
+            
+            stars.forEach(star => {
+                star.addEventListener('click', function() {
+                    const rating = parseInt(this.dataset.rating);
+                    setRating(rating);
+                    ratingSelect.value = rating;
+                });
+                
+                star.addEventListener('mouseover', function() {
+                    const rating = parseInt(this.dataset.rating);
+                    highlightStars(rating);
+                });
+            });
+            
+            document.querySelector('.star-rating').addEventListener('mouseleave', function() {
+                highlightStars(selectedRating);
+            });
+            
+            ratingSelect.addEventListener('change', function() {
+                const rating = parseInt(this.value);
+                setRating(rating);
+            });
+        }
+
+        function setRating(rating) {
+            selectedRating = rating;
+            highlightStars(rating);
+        }
+
+        function highlightStars(rating) {
+            const stars = document.querySelectorAll('.star-rating i');
+            stars.forEach((star, index) => {
+                if (index < rating) {
+                    star.style.color = '#ffd700';
+                } else {
+                    star.style.color = '#ddd';
+                }
+            });
+        }
+
+        function initializeCommentCounter() {
+            const textarea = document.getElementById('audit-notes');
+            const counter = document.getElementById('comment-count');
+            
+            textarea.addEventListener('input', function() {
+                const length = this.value.length;
+                counter.textContent = length;
+                
+                if (length > 500) {
+                    counter.style.color = 'red';
+                    this.value = this.value.substring(0, 500);
+                    counter.textContent = '500';
+                } else {
+                    counter.style.color = '';
+                }
+            });
+        }
+
+        function submitAudit() {
+            const rating = selectedRating || parseInt(document.getElementById('rating-select').value);
+            const status = document.getElementById('audit-status').value;
+            const notes = document.getElementById('audit-notes').value;
+            
+            if (!rating || !status) {
+                alert('Please provide both rating and audit decision');
+                return;
+            }
+            
+            const submitButton = document.getElementById('submit-audit');
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+            
+            fetch(`/audit/${currentAuditId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    audit_status: status,
+                    audit_rating: rating,
+                    audit_notes: notes
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Audit submitted successfully!');
+                    bootstrap.Modal.getInstance(document.getElementById('videoAuditModal')).hide();
+                    loadStats();
+                    loadPendingAudits();
+                    loadAllAudits();
+                    resetModal();
+                } else {
+                    alert('Error submitting audit: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error submitting audit:', error);
+                alert('Error submitting audit');
+            })
+            .finally(() => {
+                submitButton.disabled = false;
+                submitButton.innerHTML = '<i class="fas fa-check"></i> Submit Audit';
+            });
+        }
+
+        function resetModal() {
+            selectedRating = 0;
+            setRating(0);
+            document.getElementById('rating-select').value = '';
+            document.getElementById('audit-status').value = '';
+            document.getElementById('audit-notes').value = '';
+            document.getElementById('comment-count').textContent = '0';
+        }
+
+        function logout() {
+            fetch('/logout')
+                .then(() => window.location.href = '/')
+                .catch(error => console.error('Logout error:', error));
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,1225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - CARS24</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <script>
+  // 1. Attach to the Sync button
+  document.querySelector('.sync-btn').addEventListener('click', async () => {
+    try {
+      // 2. Disable the button while syncing
+      const btn = document.querySelector('.sync-btn');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Syncing...';
+
+      // 3. Call the endpoint
+      const res = await fetch('/sync-hubs', { method: 'POST' });
+      const json = await res.json();
+
+      if (!res.ok) {
+        throw new Error(json.error || 'Unknown sync error');
+      }
+
+      alert(json.message);       // “Sheet synced successfully”
+      
+      // 4. Refresh all dashboard data
+      loadStats();
+      loadHubAdherence();
+      loadYardManagerAssignments();
+    } catch (err) {
+      console.error('Sync failed:', err);
+      alert('Sync failed: ' + err.message);
+    } finally {
+      // 5. Restore button state
+      const btn = document.querySelector('.sync-btn');
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-sync-alt"></i> Sync';
+    }
+  });
+</script>
+
+    <div class="admin-container">
+        <!-- Header -->
+        <header class="admin-header">
+            <div class="header-content">
+                <h1 class="dashboard-title">
+                    <i class="fas fa-tachometer-alt"></i>
+                    Admin Dashboard
+                </h1>
+                <div class="header-right">
+                    <button class="sync-btn" onclick="syncData()">
+                        <i class="fas fa-sync-alt"></i>
+                        Sync Data
+                    </button>
+                    <button class="logout-btn" onclick="logout()">
+                        <i class="fas fa-sign-out-alt"></i>
+                        Logout
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="admin-main">
+            <!-- Overall Statistics Section -->
+            <section class="stats-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-chart-line"></i> Overall Statistics</h2>
+                    <button class="refresh-btn" onclick="loadStats()">
+                        <i class="fas fa-refresh"></i>
+                        Refresh
+                    </button>
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-card blue">
+                        <div class="stat-icon">
+                            <i class="fas fa-car"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>Total Assigned Cars</h3>
+                            <div class="stat-number" id="total-assigned">Loading...</div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card green">
+                        <div class="stat-icon">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>Total Cleaned</h3>
+                            <div class="stat-number" id="total-cleaned">Loading...</div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card red">
+                        <div class="stat-icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>Overdue Cleaning</h3>
+                            <div class="stat-number" id="overdue-count">Loading...</div>
+                            <div class="stat-subtitle">(>5 days)</div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card purple">
+                        <div class="stat-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>Reports Awaiting Review</h3>
+                            <div class="stat-number" id="pending-reports">Loading...</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Hub Adherence Table Section -->
+             <section class="table-section">
+  <div class="section-header">
+    <h2><i class="fas fa-chart-bar"></i> Hub Adherence Report (All Hubs)</h2>
+    <button class="refresh-btn" onclick="loadHubAdherence()">
+      <i class="fas fa-sync-alt"></i> Refresh
+    </button>
+  </div>
+  <div class="table-container">
+    <table class="modern-table" id="hub-adherence-table">
+      <thead>
+        <tr>
+          <th>🏢 Hub Name</th>
+          <th>🚗 Total Assigned</th>
+          <th>✔️ Total Cleaned</th>
+          <th>⏱ Adherence Rate</th>
+          <th>📈 Performance</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="5" class="loading">Loading hub adherence data...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+<!-- Monthly Adherence Section -->
+<section class="stats-section">
+  <div class="section-header">
+    <h2><i class="fas fa-calendar-alt"></i> Monthly Adherence</h2>
+    <button class="refresh-btn" onclick="loadMonthlyStats()">
+      <i class="fas fa-sync-alt"></i> Refresh
+    </button>
+  </div>
+  <div class="table-container">
+    <table class="modern-table" id="monthly-stats-table">
+      <thead>
+        <tr>
+          <th>Month</th>
+          <th>🚗 Total Assigned</th>
+          <th>✔️ Total Cleaned</th>
+          <th>⏱ Adherence (%)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="4" class="loading">Loading monthly stats...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+
+            <!-- Management Actions Section -->
+            <section class="actions-section">
+                <div class="actions-grid">
+                    <div class="action-card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-users"></i> User Management</h3>
+                        </div>
+                        <div class="card-content">
+                            <div class="form-group">
+                                <label for="user-email">Email</label>
+                                <input type="email" id="user-email" placeholder="user@example.com">
+                            </div>
+                            <div class="form-group">
+                                <label for="user-role">Role</label>
+                                <select id="user-role">
+                                    <option value="ground">Ground Team</option>
+                                    <option value="yard_manager">Yard Manager</option>
+                                    <option value="auditor">Auditor</option>
+                                    <option value="admin">Admin</option>
+                                </select>
+                            </div>
+                            <button class="primary-btn" onclick="setUserRole()">
+                                <i class="fas fa-user-plus"></i>
+                                Set User Role
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="action-card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-car-side"></i> Car Assignment</h3>
+                        </div>
+                        <div class="card-content">
+                            <div class="form-group">
+                                <label for="car-reg">Registration Number</label>
+                                <input type="text" id="car-reg" placeholder="e.g., UP81BZ3484">
+                            </div>
+                            <div class="form-group">
+                                <label for="hub-select">Hub Location</label>
+                                <select id="hub-select">
+                                    <option value="">Loading hubs...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="assignment-reason">Reason</label>
+                                <select id="assignment-reason">
+                                    <option value="Delivery Car">Delivery Car</option>
+                                    <option value="Test Drive">Test Drive</option>
+                                    <option value="Maintenance">Maintenance</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <button class="primary-btn" onclick="assignCar()">
+                                <i class="fas fa-plus"></i>
+                                Assign Car
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+<!-- Yard Manager Assignment Section -->
+<!-- Yard Manager Assignment Section -->
+<div class="section-header">
+    <h2><i class="fas fa-user-tie"></i> Yard Manager Assignments</h2>
+    <div style="display: flex; gap: 1rem;">
+        <button class="refresh-btn" onclick="fixCorruptedHubs()">Fix Hub Data</button>
+        <button class="refresh-btn" onclick="loadYardManagerAssignments()">Refresh</button>
+    </div>
+</div>
+
+<div class="table-section">
+    <div class="table-container">
+        <div style="padding: 1.5rem; border-bottom: 1px solid #e5e7eb;">
+            <h3>Assign Yard Manager to Hub</h3>
+            <div style="display: flex; gap: 1rem; align-items: end; margin-top: 1rem;">
+                <div class="form-group" style="flex: 1;">
+                    <label for="yardManagerEmail">Yard Manager Email</label>
+                    <input type="email" id="yardManagerEmail" placeholder="Enter email address">
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label for="assignHub">Select Hub</label>
+                    <select id="assignHub">
+                        <option value="">Loading hubs...</option>
+                    </select>
+                </div>
+                <button class="primary-btn" onclick="assignYardManager()">Assign</button>
+            </div>
+        </div>
+
+        <table class="modern-table">
+            <thead>
+                <tr>
+                    <th>Yard Manager Email</th>
+                    <th>Assigned Hubs</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="yardManagerAssignments">
+                <tr><td colspan="4">Loading assignments...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+    <script>
+        // Load data on page load
+       // Make sure this function is called when page loads
+document.addEventListener('DOMContentLoaded', function() {
+  loadStats();
+  loadHubAdherence();
+  loadHubs();
+  loadYardManagerAssignments(); // Add this line
+});
+
+// Function to load yard manager assignments
+async function loadYardManagerAssignments() {
+  try {
+    // Load hubs for dropdown
+    const hubsResponse = await fetch('/hubs');
+    const hubs = await hubsResponse.json();
+    
+    const hubSelect = document.getElementById('assignHub');
+    if (hubSelect) {
+      hubSelect.innerHTML = '<option value="">Select a hub</option>';
+      hubs.forEach(hub => {
+        hubSelect.innerHTML += `<option value="${hub.id}">${hub.name} (${hub.location})</option>`;
+      });
+    }
+
+    // Load current assignments
+    const response = await fetch('/admin-yard-managers');
+    const yardManagers = await response.json();
+    
+    const tbody = document.getElementById('yardManagerAssignments');
+    if (tbody) {
+      if (yardManagers.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4">No yard managers assigned yet</td></tr>';
+        return;
+      }
+      
+      tbody.innerHTML = yardManagers.map(ym => `
+        <tr>
+          <td>${ym.email}</td>
+          <td>${ym.assigned_hubs || 'Not assigned'}</td>
+          <td>
+            <span class="badge ${ym.assigned_hubs ? 'badge-success' : 'badge-warning'}">
+              ${ym.assigned_hubs ? 'Active' : 'Inactive'}
+            </span>
+          </td>
+          <td>
+            <button class="btn btn-sm btn-danger" onclick="removeYardManagerAssignment('${ym.email}')">
+              Remove
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+  } catch (error) {
+    console.error('Error loading yard manager assignments:', error);
+  }
+}
+
+// Function to assign yard manager
+async function assignYardManager() {
+  const email = document.getElementById('yardManagerEmail').value.trim();
+  const hubId = document.getElementById('assignHub').value;
+  
+  if (!email || !hubId) {
+    alert('Please enter email and select a hub');
+    return;
+  }
+  
+  try {
+    const response = await fetch('/admin-assign-yard-manager', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, hub_id: hubId })
+    });
+    
+    const result = await response.json();
+    if (response.ok) {
+      alert('Yard manager assigned successfully!');
+      document.getElementById('yardManagerEmail').value = '';
+      document.getElementById('assignHub').value = '';
+      loadYardManagerAssignments();
+    } else {
+      alert('Error: ' + result.error);
+    }
+  } catch (error) {
+    alert('Error assigning yard manager');
+  }
+}
+
+// Function to remove yard manager assignment
+async function removeYardManagerAssignment(email) {
+  if (!confirm(`Remove all assignments for ${email}?`)) {
+    return;
+  }
+  
+  try {
+    const response = await fetch('/admin-remove-yard-manager', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    
+    const result = await response.json();
+    if (response.ok) {
+      alert('Assignments removed successfully!');
+      loadYardManagerAssignments();
+    } else {
+      alert('Error: ' + result.error);
+    }
+  } catch (error) {
+    alert('Error removing assignments');
+  }
+}
+
+
+        // Load overall statistics
+        async function loadStats() {
+            try {
+                const [statsRes, pendingRes] = await Promise.all([
+                    fetch('/admin-stats'),
+                    fetch('/pending-reports')
+                ]);
+                
+                const stats = await statsRes.json();
+                const pending = await pendingRes.json();
+                
+                document.getElementById('total-assigned').textContent = stats.total_assigned || 0;
+                document.getElementById('total-cleaned').textContent = stats.total_cleaned || 0;
+                document.getElementById('overdue-count').textContent = stats.overdue_count || 0;
+                document.getElementById('pending-reports').textContent = pending.count || 0;
+            } catch (error) {
+                console.error('Error loading stats:', error);
+                document.getElementById('total-assigned').textContent = 'Error';
+                document.getElementById('total-cleaned').textContent = 'Error';
+                document.getElementById('overdue-count').textContent = 'Error';
+                document.getElementById('pending-reports').textContent = 'Error';
+            }
+        }
+
+        // Load hub adherence data
+        async function loadHubAdherence() {
+            try {
+                const response = await fetch('/hub-adherence-summary');
+                const hubs = await response.json();
+                
+                const tableBody = document.getElementById('hub-adherence-table');
+                
+                if (hubs.length === 0) {
+                    tableBody.innerHTML = '<tr><td colspan="5" class="no-data">No hubs found with adherence >3%</td></tr>';
+                    return;
+                }
+                
+                tableBody.innerHTML = hubs.map(hub => {
+                    const adherenceClass = getAdherenceClass(hub.adherence_rate);
+                    const performanceIcon = getPerformanceIcon(hub.adherence_rate);
+                    
+                    return `
+                        <tr>
+                            <td>
+                                <div class="location-badge">${hub.hub_location}</div>
+                            </td>
+                            <td><strong>${hub.total_assigned}</strong></td>
+                            <td><strong>${hub.total_cleaned}</strong></td>
+                            <td>
+                                <span class="adherence-rate ${adherenceClass}">
+                                    ${hub.adherence_rate}%
+                                </span>
+                            </td>
+                            <td>
+                                <div class="performance-indicator ${adherenceClass}">
+                                    <i class="${performanceIcon}"></i>
+                                    ${getPerformanceText(hub.adherence_rate)}
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+                
+            } catch (error) {
+                console.error('Error loading hub adherence:', error);
+                document.getElementById('hub-adherence-table').innerHTML = 
+                    '<tr><td colspan="5" class="error">Error loading hub data</td></tr>';
+            }
+        }
+
+        // Helper functions for adherence styling
+        function getAdherenceClass(rate) {
+            if (rate >= 80) return 'excellent';
+            if (rate >= 50) return 'good';
+            if (rate >= 20) return 'fair';
+            return 'poor';
+        }
+
+        function getPerformanceIcon(rate) {
+            if (rate >= 80) return 'fas fa-star';
+            if (rate >= 50) return 'fas fa-thumbs-up';
+            if (rate >= 20) return 'fas fa-minus-circle';
+            return 'fas fa-exclamation-triangle';
+        }
+
+        function getPerformanceText(rate) {
+            if (rate >= 80) return 'Excellent';
+            if (rate >= 50) return 'Good';
+            if (rate >= 20) return 'Fair';
+            return 'Needs Improvement';
+        }
+
+        // Load hubs for dropdown
+        async function loadHubs() {
+            try {
+                const response = await fetch('/hub-names');
+                const hubs = await response.json();
+                
+                const hubSelect = document.getElementById('hub-select');
+                hubSelect.innerHTML = '<option value="">Select Hub</option>' +
+                    hubs.map(hub => `<option value="${hub}">${hub}</option>`).join('');
+            } catch (error) {
+                console.error('Error loading hubs:', error);
+                document.getElementById('hub-select').innerHTML = '<option value="">Error loading hubs</option>';
+            }
+        }
+
+        // User management functions
+        async function setUserRole() {
+            const email = document.getElementById('user-email').value;
+            const role = document.getElementById('user-role').value;
+            
+            if (!email) {
+                alert('Please enter an email address');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/set-user-role', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, role })
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    alert(result.message);
+                    document.getElementById('user-email').value = '';
+                } else {
+                    alert('Error: ' + (result.error || 'Unknown error'));
+                }
+            } catch (error) {
+                alert('Error setting user role: ' + error.message);
+            }
+        }
+
+        // Car assignment function
+        async function assignCar() {
+            const regNo = document.getElementById('car-reg').value;
+            const hub = document.getElementById('hub-select').value;
+            const reason = document.getElementById('assignment-reason').value;
+            
+            if (!regNo || !hub) {
+                alert('Please fill in all required fields');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/assign-car', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ reg_no: regNo, hub, reason })
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    alert('Car assigned successfully!');
+                    document.getElementById('car-reg').value = '';
+                    loadStats(); // Refresh stats
+                    loadHubAdherence(); // Refresh table
+                } else {
+                    alert('Error: ' + (result.error || 'Unknown error'));
+                }
+            } catch (error) {
+                alert('Error assigning car: ' + error.message);
+            }
+        }
+
+        // Sync data function
+        async function syncData() {
+            const syncBtn = document.querySelector('.sync-btn');
+            const originalText = syncBtn.innerHTML;
+            syncBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Syncing...';
+            syncBtn.disabled = true;
+            
+            try {
+                await fetch('/sync-car-assignments', { method: 'POST' });
+                await fetch('/sync-hubs', { method: 'POST' });
+                
+                // Refresh all data
+                await loadStats();
+                await loadHubAdherence();
+                await loadHubs();
+                
+                alert('Data synced successfully!');
+            } catch (error) {
+                alert('Sync failed: ' + error.message);
+            } finally {
+                syncBtn.innerHTML = originalText;
+                syncBtn.disabled = false;
+            }
+        }
+
+        // Logout function
+        function logout() {
+            fetch('/logout').then(() => {
+                window.location.href = '/';
+            });
+        }
+        // Load yard manager assignments
+async function loadYardManagerAssignments() {
+    try {
+        // Load hubs for dropdown (from Google Sheets)
+        const hubsResponse = await fetch('/hubs');
+        const hubs = await hubsResponse.json();
+        
+        const hubSelect = document.getElementById('assignHub');
+        hubSelect.innerHTML = '<option value="">Select a hub</option>';
+        hubs.forEach(hub => {
+            hubSelect.innerHTML += `<option value="${hub.id}">${hub.name} (${hub.location})</option>`;
+        });
+
+        // Load current assignments
+        const response = await fetch('/admin-yard-managers');
+        const yardManagers = await response.json();
+        
+        const tbody = document.getElementById('yardManagerAssignments');
+        if (yardManagers.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="no-data">No yard managers assigned yet</td></tr>';
+            return;
+        }
+        
+        tbody.innerHTML = yardManagers.map(ym => `
+            <tr>
+                <td>${ym.email}</td>
+                <td><span class="location-badge">${ym.assigned_hubs || 'Not assigned'}</span></td>
+                <td><span class="badge ${ym.assigned_hubs ? 'badge-success' : 'badge-warning'}">
+                    ${ym.assigned_hubs ? 'Active' : 'Inactive'}</span></td>
+                <td><button class="btn btn-sm btn-danger" onclick="removeYardManagerAssignment('${ym.email}', '${ym.assigned_hubs}')">
+                    <i class="fas fa-trash"></i> Remove</button></td>
+            </tr>
+        `).join('');
+        
+    } catch (error) {
+        console.error('Error loading yard manager assignments:', error);
+    }
+}
+
+// Assign yard manager to hub
+async function assignYardManager() {
+    const email = document.getElementById('yardManagerEmail').value.trim();
+    const hubId = document.getElementById('assignHub').value;
+    
+    if (!email || !hubId) {
+        alert('Please enter email and select a hub');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/admin-assign-yard-manager', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, hub_id: hubId })
+        });
+        
+        const result = await response.json();
+        if (response.ok) {
+            alert('Yard manager assigned successfully!');
+            document.getElementById('yardManagerEmail').value = '';
+            document.getElementById('assignHub').value = '';
+            loadYardManagerAssignments();
+        } else {
+            alert('Error: ' + result.error);
+        }
+    } catch (error) {
+        alert('Error assigning yard manager');
+    }
+}
+// NEW: Remove yard manager assignment function - FIXED
+async function removeYardManagerAssignment(email) {
+    if (!confirm(`Are you sure you want to remove all hub assignments for ${email}?`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/admin-remove-yard-manager', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+        });
+        
+        const result = await response.json();
+        if (response.ok) {
+            alert('Yard manager assignments removed successfully!');
+            loadYardManagerAssignments();
+        } else {
+            alert('Error: ' + result.error);
+        }
+    } catch (error) {
+        alert('Error removing assignments: ' + error.message);
+    }
+}
+// One-time cleanup endpoint
+app.post('/cleanup-bad-data', requireAuth('admin'), (req, res) => {
+  db.run(`
+    DELETE FROM hubs 
+    WHERE name LIKE 'UP%' 
+    OR name LIKE 'DL%' 
+    OR name LIKE 'MH%'
+    OR length(name) <= 5
+  `, function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ 
+      success: true, 
+      message: `Cleaned up ${this.changes} bad entries` 
+    });
+  });
+});
+// Add this to DOMContentLoaded event
+document.addEventListener('DOMContentLoaded', function() {
+    loadStats();
+    loadHubAdherence();
+    loadHubs();
+    loadYardManagerAssignments(); // ADD THIS LINE
+});
+
+// Add these new functions
+async function loadYardManagerAssignments() {
+    try {
+        const hubsResponse = await fetch('/hubs');
+        const hubs = await hubsResponse.json();
+        
+        const hubSelect = document.getElementById('assignHub');
+        if (hubSelect) {
+            hubSelect.innerHTML = '<option value="">Select a hub</option>';
+            hubs.forEach(hub => {
+                hubSelect.innerHTML += `<option value="${hub.id}">${hub.name} (${hub.location})</option>`;
+            });
+        }
+
+        const response = await fetch('/admin-yard-managers');
+        const yardManagers = await response.json();
+        
+        const tbody = document.getElementById('yardManagerAssignments');
+        if (tbody) {
+            if (yardManagers.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4">No yard managers assigned yet</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = yardManagers.map(ym => `
+                <tr>
+                    <td>${ym.email}</td>
+                    <td>${ym.assigned_hubs || 'Not assigned'}</td>
+                    <td>
+                        <span class="badge ${ym.assigned_hubs ? 'badge-success' : 'badge-warning'}">
+                            ${ym.assigned_hubs ? 'Active' : 'Inactive'}
+                        </span>
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-danger" onclick="removeYardManagerAssignment('${ym.email}')">
+                            Remove
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+    } catch (error) {
+        console.error('Error loading yard manager assignments:', error);
+    }
+}
+
+async function assignYardManager() {
+    const email = document.getElementById('yardManagerEmail').value.trim();
+    const hubId = document.getElementById('assignHub').value;
+    
+    if (!email || !hubId) {
+        alert('Please enter email and select a hub');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/admin-assign-yard-manager', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, hub_id: hubId })
+        });
+        
+        const result = await response.json();
+        if (response.ok) {
+            alert('Yard manager assigned successfully!');
+            document.getElementById('yardManagerEmail').value = '';
+            document.getElementById('assignHub').value = '';
+            loadYardManagerAssignments();
+        } else {
+            alert('Error: ' + result.error);
+        }
+    } catch (error) {
+        alert('Error assigning yard manager');
+    }
+}
+
+async function removeYardManagerAssignment(email) {
+    if (!confirm(`Remove all assignments for ${email}?`)) return;
+    
+    try {
+        const response = await fetch('/admin-remove-yard-manager', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+        });
+        
+        const result = await response.json();
+        if (response.ok) {
+            alert('Assignments removed successfully!');
+            loadYardManagerAssignments();
+        } else {
+            alert('Error: ' + result.error);
+        }
+    } catch (error) {
+        alert('Error removing assignments');
+    }
+}
+
+async function fixCorruptedHubs() {
+    if (!confirm('This will fix corrupted hub data. Continue?')) return;
+    
+    try {
+        const response = await fetch('/fix-corrupted-hubs', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        
+        const result = await response.json();
+        if (response.ok) {
+            alert('Hub data fixed successfully!');
+            loadYardManagerAssignments();
+        } else {
+            alert('Error: ' + result.error);
+        }
+    } catch (error) {
+        alert('Error fixing hub data');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadStats();
+    loadHubAdherence();
+    loadYardManagerAssignments();
+});
+
+// Load hub adherence data - FIXED
+async function loadHubAdherence() {
+    try {
+        const response = await fetch('/hub-adherence-summary');
+        const hubs = await response.json();
+        
+        const tableBody = document.querySelector('#hub-adherence-table tbody');
+        if (!tableBody) {
+            console.error('Hub adherence table not found');
+            return;
+        }
+        
+        if (hubs.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="5" class="no-data">No hubs found with adherence >3%</td></tr>';
+            return;
+        }
+        
+        tableBody.innerHTML = hubs.map(hub => `
+            <tr>
+                <td><strong>${hub.hub_location}</strong></td>
+                <td>${hub.total_assigned}</td>
+                <td>${hub.total_cleaned}</td>
+                <td><span class="adherence-rate">${hub.adherence_rate}%</span></td>
+                <td><span class="performance-indicator">${getPerformanceText(hub.adherence_rate)}</span></td>
+            </tr>
+        `).join('');
+        
+    } catch (error) {
+        console.error('Error loading hub adherence:', error);
+    }
+}
+
+// Sync from Google Sheets - FIXED
+async function syncFromGoogleSheets() {
+    try {
+        const response = await fetch('/sync-hubs', { method: 'POST' });
+        const result = await response.json();
+        
+        if (response.ok) {
+            alert('✅ Data synced successfully!');
+            // Reload all data
+            loadStats();
+            loadHubAdherence();
+            loadYardManagerAssignments();
+        } else {
+            alert('❌ Sync failed: ' + result.error);
+        }
+    } catch (error) {
+        alert('❌ Sync error: ' + error.message);
+    }
+}
+
+function getPerformanceText(rate) {
+    if (rate >= 80) return 'Excellent';
+    if (rate >= 60) return 'Good';
+    if (rate >= 40) return 'Average';
+    return 'Needs Improvement';
+}
+
+    </script>
+    <script>
+// Load all dashboard data when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    loadStats();
+    loadHubAdherence();
+    loadYardManagerAssignments();
+});
+
+// Sync from Google Sheets - THE MISSING FUNCTION
+async function syncFromGoogleSheets() {
+    const btn = document.querySelector('.sync-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Syncing...';
+    
+    try {
+        const res = await fetch('/sync-hubs', { method: 'POST' });
+        const json = await res.json();
+        
+        if (!res.ok) {
+            alert('Sync failed: ' + json.error);
+            return;
+        }
+        
+        // Reload all data after successful sync
+        await Promise.all([
+            loadStats(),
+            loadHubAdherence(),
+            loadYardManagerAssignments(),
+            loadHubs()
+        ]);
+        
+        alert('✅ ' + json.message);
+    } catch (error) {
+        alert('❌ Sync error: ' + error.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-sync-alt"></i> Sync Data';
+    }
+}
+
+// Load admin statistics
+async function loadStats() {
+    try {
+        const response = await fetch('/admin-stats');
+        const stats = await response.json();
+        
+        document.getElementById('total-assigned').textContent = stats.total_assigned || 0;
+        document.getElementById('total-cleaned').textContent = stats.total_cleaned || 0;
+        document.getElementById('overdue-count').textContent = stats.overdue_count || 0;
+        
+        const pendingResponse = await fetch('/pending-reports');
+        const pendingData = await pendingResponse.json();
+        document.getElementById('pending-reports').textContent = pendingData.count || 0;
+        
+    } catch (error) {
+        console.error('Error loading stats:', error);
+    }
+}
+
+// Load hub adherence data
+async function loadHubAdherence() {
+    try {
+        const response = await fetch('/hub-adherence-summary');
+        const hubs = await response.json();
+        
+        const tableBody = document.querySelector('#hub-adherence-table tbody');
+        if (!tableBody) {
+            console.error('Hub adherence table not found');
+            return;
+        }
+        
+        if (hubs.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="5" class="no-data">No hubs found with adherence >3%</td></tr>';
+            return;
+        }
+        
+        tableBody.innerHTML = hubs.map(hub => `
+            <tr>
+                <td><strong>${hub.hub_location}</strong></td>
+                <td>${hub.total_assigned}</td>
+                <td>${hub.total_cleaned}</td>
+                <td><span class="adherence-rate">${hub.adherence_rate}%</span></td>
+                <td><span class="performance-indicator">${getPerformanceText(hub.adherence_rate)}</span></td>
+            </tr>
+        `).join('');
+        
+    } catch (error) {
+        console.error('Error loading hub adherence:', error);
+        const tableBody = document.querySelector('#hub-adherence-table tbody');
+        if (tableBody) {
+            tableBody.innerHTML = '<tr><td colspan="5" class="error">Error loading hub data</td></tr>';
+        }
+    }
+}
+
+// Load yard manager assignments
+async function loadYardManagerAssignments() {
+    try {
+        // Load hubs for dropdown
+        const hubsResponse = await fetch('/hubs');
+        const hubs = await hubsResponse.json();
+        
+        const hubSelect = document.getElementById('assignHub');
+        if (hubSelect) {
+            hubSelect.innerHTML = '<option value="">Select a hub</option>';
+            hubs.forEach(hub => {
+                hubSelect.innerHTML += `<option value="${hub.id}">${hub.name} (${hub.location})</option>`;
+            });
+        }
+
+        // Load current assignments
+        const response = await fetch('/admin-yard-managers');
+        const yardManagers = await response.json();
+        
+        const tbody = document.getElementById('yardManagerAssignments');
+        if (!tbody) {
+            console.error('Yard manager assignments table not found');
+            return;
+        }
+        
+        if (yardManagers.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="no-data">No yard managers assigned yet</td></tr>';
+            return;
+        }
+        
+        tbody.innerHTML = yardManagers.map(ym => `
+            <tr>
+                <td>${ym.email}</td>
+                <td>
+                    <span class="location-badge">
+                        ${ym.assigned_hubs ? ym.assigned_hubs.split(',').map(hub => hub.trim()).join(', ') : 'Not assigned'}
+                    </span>
+                </td>
+                <td>
+                    <span class="badge ${ym.assigned_hubs ? 'badge-success' : 'badge-warning'}">
+                        ${ym.assigned_hubs ? 'Active' : 'Inactive'}
+                    </span>
+                </td>
+                <td>
+                    <button class="btn btn-sm btn-danger" onclick="removeYardManagerAssignment('${ym.email}')">
+                        <i class="fas fa-trash"></i> Remove All
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+        
+    } catch (error) {
+        console.error('Error loading yard manager assignments:', error);
+        const tbody = document.getElementById('yardManagerAssignments');
+        if (tbody) {
+            tbody.innerHTML = '<tr><td colspan="4" class="error">Error loading assignments</td></tr>';
+        }
+    }
+}
+
+// Load hubs for dropdown
+async function loadHubs() {
+    try {
+        const response = await fetch('/hubs');
+        const hubs = await response.json();
+        
+        const hubSelect = document.getElementById('assignHub');
+        if (hubSelect) {
+            hubSelect.innerHTML = '<option value="">Select a hub</option>';
+            hubs.forEach(hub => {
+                hubSelect.innerHTML += `<option value="${hub.id}">${hub.name} (${hub.location})</option>`;
+            });
+        }
+    } catch (error) {
+        console.error('Error loading hubs:', error);
+    }
+}
+
+// Assign yard manager
+async function assignYardManager() {
+    const email = document.getElementById('yardManagerEmail').value.trim();
+    const hubId = document.getElementById('assignHub').value;
+    
+    if (!email || !hubId) {
+        alert('Please enter email and select a hub');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/admin-assign-yard-manager', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, hub_id: hubId })
+        });
+        
+        const result = await response.json();
+        if (response.ok) {
+            alert('Yard manager assigned successfully!');
+            document.getElementById('yardManagerEmail').value = '';
+            document.getElementById('assignHub').value = '';
+            loadYardManagerAssignments();
+        } else {
+            alert('Error: ' + result.error);
+        }
+    } catch (error) {
+        alert('Error assigning yard manager: ' + error.message);
+    }
+}
+
+// Remove yard manager assignment
+async function removeYardManagerAssignment(email) {
+    if (!confirm(`Are you sure you want to remove all hub assignments for ${email}?`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/admin-remove-yard-manager', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+        });
+        
+        const result = await response.json();
+        if (response.ok) {
+            alert('Yard manager assignments removed successfully!');
+            loadYardManagerAssignments();
+        } else {
+            alert('Error: ' + result.error);
+        }
+    } catch (error) {
+        alert('Error removing assignments: ' + error.message);
+    }
+}
+
+// Helper function
+function getPerformanceText(rate) {
+    if (rate >= 80) return 'Excellent';
+    if (rate >= 60) return 'Good';
+    if (rate >= 40) return 'Average';
+    return 'Needs Improvement';
+}
+
+function logout() {
+    fetch('/logout')
+        .then(() => window.location.href = '/')
+        .catch(console.error);
+}
+</script>
+<script>
+// On page load, fetch and render adherence
+document.addEventListener('DOMContentLoaded', loadHubAdherence);
+
+async function loadHubAdherence() {
+  const tbody = document.querySelector('#hub-adherence-table tbody');
+  if (!tbody) return;
+
+  try {
+    const res = await fetch('/hub-adherence-summary');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const hubs = await res.json();
+
+    if (hubs.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" class="no-data">No hubs to display</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = hubs.map(hub => `
+      <tr>
+        <td>${hub.hub_location}</td>
+        <td>${hub.total_assigned}</td>
+        <td>${hub.total_cleaned}</td>
+        <td>${hub.adherence_rate}%</td>
+        <td>${getPerformanceText(hub.adherence_rate)}</td>
+      </tr>
+    `).join('');
+  } catch (err) {
+    console.error('Adherence load error:', err);
+    tbody.innerHTML = '<tr><td colspan="5" class="error">Error loading adherence data</td></tr>';
+  }
+}
+
+function getPerformanceText(rate) {
+  if (rate >= 80) return 'Excellent';
+  if (rate >= 60) return 'Good';
+  if (rate >= 40) return 'Average';
+  return 'Needs Improvement';
+}
+</script>
+<script>
+async function loadHubAdherence() {
+  const tbody = document.querySelector('#hub-adherence-table tbody');
+  tbody.innerHTML = `<tr><td colspan="5" class="loading">Loading hub adherence data...</td></tr>`;
+  try {
+    const res = await fetch('/hub-adherence-summary');
+    if (!res.ok) throw new Error('HTTP error ' + res.status);
+    const hubs = await res.json();
+    if (!hubs.length) {
+      tbody.innerHTML = `<tr><td colspan="5" class="no-data">No hub adherence data found</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = hubs.map(hub => `
+      <tr>
+        <td>${hub.hub_location}</td>
+        <td>${hub.total_assigned}</td>
+        <td>${hub.total_cleaned}</td>
+        <td>${hub.adherence_rate}%</td>
+        <td>${performanceText(hub.adherence_rate)}</td>
+      </tr>
+    `).join('');
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="5" class="error">Error loading adherence data</td></tr>`;
+    console.error(err);
+  }
+}
+function performanceText(rate) {
+  if (rate >= 80) return 'Excellent';
+  if (rate >= 60) return 'Good';
+  if (rate >= 40) return 'Average';
+  return 'Needs Improvement';
+}
+// Load on page load
+document.addEventListener('DOMContentLoaded', loadHubAdherence);
+</script>
+
+  } catch (err) {
+    console.error('Error loading monthly stats:', err);
+    tbody.innerHTML = '<tr><td colspan="4" class="error">Error loading monthly stats</td></tr>';
+  }
+}
+document.addEventListener('DOMContentLoaded', loadMonthlyStats);
+</script>
+
+</body>
+</html>

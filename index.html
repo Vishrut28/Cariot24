@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Cars24 – Sign In</title>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body class="login-bg">
+  <div class="login-box">
+    <h1>Cars24</h1>
+    <div id="errorMsg" class="error"></div>
+    <div id="g_id_onload"
+         data-client_id="284150378430-p1c7c213dtj12mnmmmr349i7m0mievlj.apps.googleusercontent.com"
+         data-callback="handleCredentialResponse"
+         data-auto_prompt="false">
+    </div>
+    <div class="g_id_signin" data-type="standard" data-shape="rectangular"
+         data-theme="filled_blue" data-text="signin_with"
+         data-size="large" data-logo_alignment="left">
+    </div>
+  </div>
+  <script>
+    async function handleCredentialResponse(response) {
+      try {
+        const r = await fetch('/google-auth', {
+          method: 'POST',
+          credentials: 'include',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ token: response.credential })
+        });
+        const d = await r.json();
+        
+        // Route to appropriate dashboard based on role
+        switch(d.role) {
+          case 'admin': window.location = 'admin-dashboard.html'; break;
+          case 'auditor': window.location = 'auditor-dashboard.html'; break;
+          case 'yard_manager': window.location = 'yard-dashboard.html'; break;
+          case 'ground': window.location = 'ground-dashboard.html'; break;
+          default: window.location = 'user-dashboard.html';
+        }
+      } catch(e) {
+        document.getElementById('errorMsg').textContent = e.message;
+      }
+    }
+  </script>
+</body>
+</html>

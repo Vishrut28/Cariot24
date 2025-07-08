@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>User Dashboard</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+  <header class="user-header">
+    <h1>Welcome, <span id="userEmail"></span></h1>
+    <button id="logoutBtn">Logout</button>
+  </header>
+
+  <main class="container">
+    <div class="card">
+      <h2>Submit Cleaning Report</h2>
+      <form id="reportForm">
+        <label for="regNo">Vehicle Registration</label>
+        <select id="regNo">
+          <option>Loading vehicles…</option>
+        </select>
+
+        <label for="hubLocation">Hub Location</label>
+        <input id="hubLocation" readonly/>
+
+        <label for="cleaningDate">Cleaning Date</label>
+        <input type="date" id="cleaningDate" required/>
+
+        <label for="exteriorVideo">Exterior Video</label>
+        <input type="file" id="exteriorVideo" accept="video/*" required/>
+
+        <label for="interiorVideo">Interior Video</label>
+        <input type="file" id="interiorVideo" accept="video/*" required/>
+
+        <button type="submit">Submit Report</button>
+      </form>
+      <div id="formMsg" class="message"></div>
+    </div>
+  </main>
+
+  <script>
+    function showMessage(text, isError = false) {
+      const el = document.getElementById('formMsg');
+      el.textContent = text;
+      el.className = isError ? 'message error' : 'message success';
+    }
+
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+      fetch('/logout', { credentials: 'include' })
+        .then(() => window.location = '/');
+    });
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      try {
+        const uiRes = await fetch('/user-info', { credentials: 'include' });
+        if (!uiRes.ok) throw new Error('Not authenticated');
+        
+        const ui = await uiRes.json();
+        document.getElementById('userEmail').textContent = ui.email;
+        document.getElementById('hubLocation').value = ui.hub || '';
+
+        const carsRes = await fetch('/my-cars', { credentials: 'include' });
+        if (!carsRes.ok) throw new Error('Failed to load vehicles');
+        
+        const cars = await carsRes.json();
+        const sel = document.getElementById('regNo');
+        sel.innerHTML = '';
+
+        if (cars.length === 0) {
+          sel.innerHTML = '<option>No vehicles assigned</option>';
+        } else {
+          sel.innerHTML = '<option value="">Select vehicle</option>';
+          cars.forEach(c => {
+            const o = document.createElement('option');
+            o.value = c.reg_no;
+            o.textContent = c.reg_no + ' – ' + (c.reason || '');
+            sel.appendChild(o);
+          });
+        }
+        document.getElementById('cleaningDate').valueAsDate = new Date();
+      } catch (err) {
+        console.error(err);
+        if (err.message.includes('authenticated')) window.location = '/';
+        else showMessage(err.message, true);
+      }
+    });
+
+    document.getElementById('reportForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      showMessage('');
+
+      const regNo = document.getElementById('regNo').value;
+      const hub = document.getElementById('hubLocation').value;
+      const date = document.getElementById('cleaningDate').value;
+      const extV = document.getElementById('exteriorVideo').files[0];
+      const intV = document.getElementById('interiorVideo').files[0];
+
+      if (!regNo || !hub || !date || !extV || !intV) {
+        return showMessage('Please fill all fields and upload both videos.', true);
+      }
+
+      const fd = new FormData();
+      fd.append('reg_no', regNo);
+      fd.append('hub_location', hub);
+      fd.append('cleaning_date', date);
+      fd.append('exterior_video', extV);
+      fd.append('interior_video', intV);
+
+      try {
+        const res = await fetch('/submit', {
+          method: 'POST',
+          credentials: 'include',
+          body: fd
+        });
+        
+        const json = await res.json();
+        if (json.id) {
+          showMessage('Report submitted successfully!');
+          e.target.reset();
+          document.getElementById('cleaningDate').valueAsDate = new Date();
+        } else {
+          throw new Error(json.error || 'Submission failed');
+        }
+      } catch (err) {
+        console.error(err);
+        showMessage(err.message, true);
+      }
+    });
+  </script>
+</body>
+</html>

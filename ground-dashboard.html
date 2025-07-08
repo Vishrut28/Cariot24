@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CARS24 - Ground Worker Dashboard</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="style.css" rel="stylesheet">
+</head>
+<body>
+    <div class="ground-worker-container">
+        <header class="admin-header">
+            <div class="header-content">
+                <h1 class="dashboard-title">
+                    <i class="fas fa-video"></i>
+                    Ground Worker Dashboard
+                </h1>
+                <div class="header-right">
+                    <span id="user-email">Loading...</span>
+                    <button class="logout-btn" onclick="logout()">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="admin-main">
+            <div class="upload-card">
+                <div class="section-header">
+                    <h2><i class="fas fa-upload"></i> Upload Cleaning Videos</h2>
+                    <div class="stats-info">
+                        <span>Today's Uploads: <strong id="today-uploads">0</strong></span>
+                        <span>Total: <strong id="total-uploads">0</strong></span>
+                    </div>
+                </div>
+
+                <form id="cleaningForm" enctype="multipart/form-data">
+                    <!-- Car Registration Input -->
+                    <div class="form-group">
+                        <label for="regNoInput">
+                            <i class="fas fa-car"></i> Car Registration Number 
+                            <span style="color:#ef4444;">*</span>
+                        </label>
+                        <input type="text" 
+                               id="regNoInput" 
+                               name="reg_no" 
+                               required 
+                               placeholder="e.g. UP81BZ3484" 
+                               style="text-transform:uppercase;">
+                        <div class="form-feedback" id="reg-feedback"></div>
+                    </div>
+
+                    <!-- Hub Location (Auto-filled) -->
+                    <div class="form-group">
+                        <label for="hubLocation">
+                            <i class="fas fa-map-marker-alt"></i> Assigned Hub
+                        </label>
+                        <input type="text" 
+                               id="hubLocation" 
+                               name="hub_location" 
+                               readonly 
+                               placeholder="Will auto-populate when you enter car registration"
+                               style="background:#f4f6f8;">
+                    </div>
+
+                    <!-- Cleaning Date -->
+                    <div class="form-group">
+                        <label for="cleaningDate">
+                            <i class="fas fa-calendar"></i> Cleaning Date 
+                            <span style="color:#ef4444;">*</span>
+                        </label>
+                        <input type="date" id="cleaningDate" name="cleaning_date" required>
+                    </div>
+
+                    <!-- Exterior Video Section -->
+                    <div class="video-section" data-video="exterior">
+                        <h4><i class="fas fa-car"></i> Exterior Video <span style="color:#ef4444;">*</span></h4>
+                        
+                        <!-- Tab Controls -->
+                        <div class="video-tabs">
+                            <button type="button" class="video-tab active" data-tab="upload">
+                                <i class="fas fa-upload"></i> Upload File
+                            </button>
+                            <button type="button" class="video-tab" data-tab="record">
+                                <i class="fas fa-video"></i> Record Live
+                            </button>
+                        </div>
+
+                        <!-- Upload Tab Content -->
+                        <div class="tab-content upload-tab active">
+                            <input type="file" 
+                                   id="exteriorVideo" 
+                                   name="exterior_video" 
+                                   accept="video/*" 
+                                   class="form-control">
+                        </div>
+
+                        <!-- Record Tab Content -->
+                        <div class="tab-content record-tab">
+                            <video id="exteriorPreview" class="video-preview" muted playsinline></video>
+                            <div class="recording-controls">
+                                <button type="button" class="record-btn" id="exteriorRecord">
+                                    <i class="fas fa-video"></i> Start Recording
+                                </button>
+                                <button type="button" class="record-btn" id="exteriorStop" style="display:none;">
+                                    <i class="fas fa-stop"></i> Stop Recording
+                                </button>
+                                <button type="button" class="record-btn" id="exteriorRetake" style="display:none;">
+                                    <i class="fas fa-redo"></i> Retake
+                                </button>
+                            </div>
+                            <div class="recording-status" id="exteriorStatus"></div>
+                        </div>
+                    </div>
+
+                    <!-- Interior Video Section -->
+                    <div class="video-section" data-video="interior">
+                        <h4><i class="fas fa-couch"></i> Interior Video <span style="color:#ef4444;">*</span></h4>
+                        
+                        <!-- Tab Controls -->
+                        <div class="video-tabs">
+                            <button type="button" class="video-tab active" data-tab="upload">
+                                <i class="fas fa-upload"></i> Upload File
+                            </button>
+                            <button type="button" class="video-tab" data-tab="record">
+                                <i class="fas fa-video"></i> Record Live
+                            </button>
+                        </div>
+
+                        <!-- Upload Tab Content -->
+                        <div class="tab-content upload-tab active">
+                            <input type="file" 
+                                   id="interiorVideo" 
+                                   name="interior_video" 
+                                   accept="video/*" 
+                                   class="form-control">
+                        </div>
+
+                        <!-- Record Tab Content -->
+                        <div class="tab-content record-tab">
+                            <video id="interiorPreview" class="video-preview" muted playsinline></video>
+                            <div class="recording-controls">
+                                <button type="button" class="record-btn" id="interiorRecord">
+                                    <i class="fas fa-video"></i> Start Recording
+                                </button>
+                                <button type="button" class="record-btn" id="interiorStop" style="display:none;">
+                                    <i class="fas fa-stop"></i> Stop Recording
+                                </button>
+                                <button type="button" class="record-btn" id="interiorRetake" style="display:none;">
+                                    <i class="fas fa-redo"></i> Retake
+                                </button>
+                            </div>
+                            <div class="recording-status" id="interiorStatus"></div>
+                        </div>
+                    </div>
+
+                    <!-- Hidden inputs for recorded videos -->
+                    <input type="hidden" id="exteriorBlob" name="exterior_blob">
+                    <input type="hidden" id="interiorBlob" name="interior_blob">
+                    <input type="hidden" id="geoLat" name="geo_lat">
+                    <input type="hidden" id="geoLng" name="geo_lng">
+
+                    <!-- Submit Button -->
+                    <button type="submit" class="primary-btn" id="submitBtn">
+                        <i class="fas fa-paper-plane"></i> Submit Report
+                    </button>
+
+                    <!-- Progress Bar -->
+                    <div class="upload-progress" style="display: none;">
+                        <div class="upload-progress-bar" id="progressBar"></div>
+                    </div>
+
+                    <!-- Message Display -->
+                    <div id="message" class="message" style="margin-top:1rem; min-height:1.5em;"></div>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <!-- Recording Indicator -->
+    <div id="recordingIndicator" class="recording-indicator" style="display: none;">
+        <i class="fas fa-circle" style="color: #ef4444; animation: pulse 1s infinite;"></i>
+        REC <span id="recordingTimer">00:00</span>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Global variables
+        let mediaRecorders = {};
+        let recordedChunks = {};
+        let streams = {};
+        let recordingTimers = {};
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            loadUserInfo();
+            loadStats();
+            initializeForm();
+            initializeTabs();
+            initializeRecording();
+            setupGeolocation();
+        });
+
+        // Load user information
+        function loadUserInfo() {
+            fetch('/user-info')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('user-email').textContent = data.email;
+                })
+                .catch(error => {
+                    console.error('Error loading user info:', error);
+                    document.getElementById('user-email').textContent = 'Unknown User';
+                });
+        }
+
+        // Load user statistics
+        function loadStats() {
+            fetch('/ground-stats')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('today-uploads').textContent = data.today_uploads || 0;
+                    document.getElementById('total-uploads').textContent = data.total_uploads || 0;
+                })
+                .catch(error => {
+                    console.error('Error loading stats:', error);
+                });
+        }
+
+        // Initialize form functionality
+        function initializeForm() {
+            const regInput = document.getElementById('regNoInput');
+            const hubField = document.getElementById('hubLocation');
+            const feedbackDiv = document.getElementById('reg-feedback');
+
+            // Auto-uppercase and hub lookup
+            regInput.addEventListener('input', function() {
+                this.value = this.value.toUpperCase();
+                const regNo = this.value.trim();
+                
+                // Clear previous feedback
+                hubField.value = '';
+                feedbackDiv.textContent = '';
+                feedbackDiv.className = 'form-feedback';
+
+                if (regNo.length >= 6) {
+                    feedbackDiv.textContent = 'Looking up hub assignment...';
+                    feedbackDiv.className = 'form-feedback loading';
+
+                    fetch('/car-hub?reg_no=' + encodeURIComponent(regNo))
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.hub_location) {
+                                hubField.value = data.hub_location;
+                                feedbackDiv.textContent = '✓ Hub found: ' + data.hub_location;
+                                feedbackDiv.className = 'form-feedback success';
+                            } else {
+                                feedbackDiv.textContent = '⚠ Car not found in assignments. Please check registration number.';
+                                feedbackDiv.className = 'form-feedback warning';
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Hub lookup error:', error);
+                            feedbackDiv.textContent = '✗ Error looking up hub assignment';
+                            feedbackDiv.className = 'form-feedback error';
+                        });
+                }
+            });
+
+            // Set default cleaning date to today
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('cleaningDate').value = today;
+
+            // Form submission
+            document.getElementById('cleaningForm').addEventListener('submit', handleFormSubmission);
+        }
+
+        // Initialize tab functionality
+        function initializeTabs() {
+            document.querySelectorAll('.video-tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    const videoSection = this.closest('.video-section');
+                    const tabType = this.dataset.tab;
+                    
+                    // Update active tab
+                    videoSection.querySelectorAll('.video-tab').forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Update active content
+                    videoSection.querySelectorAll('.tab-content').forEach(content => {
+                        content.classList.remove('active');
+                    });
+                    videoSection.querySelector(`.${tabType}-tab`).classList.add('active');
+                });
+            });
+        }
+
+        // Initialize recording functionality
+        function initializeRecording() {
+            // Setup recording for both video types
+            setupRecordingControls('exterior');
+            setupRecordingControls('interior');
+        }
+
+        // Setup recording controls for a video type
+        function setupRecordingControls(videoType) {
+            const recordBtn = document.getElementById(videoType + 'Record');
+            const stopBtn = document.getElementById(videoType + 'Stop');
+            const retakeBtn = document.getElementById(videoType + 'Retake');
+            const preview = document.getElementById(videoType + 'Preview');
+            const status = document.getElementById(videoType + 'Status');
+
+            recordBtn.addEventListener('click', () => startRecording(videoType));
+            stopBtn.addEventListener('click', () => stopRecording(videoType));
+            retakeBtn.addEventListener('click', () => retakeRecording(videoType));
+        }
+
+        // Start recording
+        async function startRecording(videoType) {
+            try {
+                const constraints = {
+                    video: { width: 1280, height: 720 },
+                    audio: true
+                };
+
+                streams[videoType] = await navigator.mediaDevices.getUserMedia(constraints);
+                const preview = document.getElementById(videoType + 'Preview');
+                preview.srcObject = streams[videoType];
+                preview.play();
+
+                // Setup MediaRecorder
+                recordedChunks[videoType] = [];
+                mediaRecorders[videoType] = new MediaRecorder(streams[videoType]);
+                
+                mediaRecorders[videoType].ondataavailable = function(event) {
+                    if (event.data.size > 0) {
+                        recordedChunks[videoType].push(event.data);
+                    }
+                };
+
+                mediaRecorders[videoType].onstop = function() {
+                    const blob = new Blob(recordedChunks[videoType], { type: 'video/webm' });
+                    const url = URL.createObjectURL(blob);
+                    preview.srcObject = null;
+                    preview.src = url;
+                    
+                    // Store blob for form submission
+                    window[videoType + 'RecordedBlob'] = blob;
+                };
+
+                // Start recording
+                mediaRecorders[videoType].start();
+                startRecordingTimer(videoType);
+                showRecordingIndicator();
+
+                // Update UI
+                document.getElementById(videoType + 'Record').style.display = 'none';
+                document.getElementById(videoType + 'Stop').style.display = 'inline-flex';
+                document.getElementById(videoType + 'Status').textContent = 'Recording...';
+
+            } catch (error) {
+                console.error('Error starting recording:', error);
+                document.getElementById(videoType + 'Status').textContent = 'Error: Could not access camera';
+            }
+        }
+
+        // Stop recording
+        function stopRecording(videoType) {
+            if (mediaRecorders[videoType]) {
+                mediaRecorders[videoType].stop();
+                streams[videoType].getTracks().forEach(track => track.stop());
+                
+                stopRecordingTimer(videoType);
+                hideRecordingIndicator();
+
+                // Update UI
+                document.getElementById(videoType + 'Record').style.display = 'inline-flex';
+                document.getElementById(videoType + 'Stop').style.display = 'none';
+                document.getElementById(videoType + 'Retake').style.display = 'inline-flex';
+                document.getElementById(videoType + 'Status').textContent = 'Recording completed';
+            }
+        }
+
+        // Retake recording
+        function retakeRecording(videoType) {
+            const preview = document.getElementById(videoType + 'Preview');
+            preview.src = '';
+            window[videoType + 'RecordedBlob'] = null;
+            
+            // Reset UI
+            document.getElementById(videoType + 'Record').style.display = 'inline-flex';
+            document.getElementById(videoType + 'Retake').style.display = 'none';
+            document.getElementById(videoType + 'Status').textContent = '';
+        }
+
+        // Recording timer functionality
+        function startRecordingTimer(videoType) {
+            let seconds = 0;
+            recordingTimers[videoType] = setInterval(() => {
+                seconds++;
+                const mins = Math.floor(seconds / 60);
+                const secs = seconds % 60;
+                const timeStr = String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
+                document.getElementById('recordingTimer').textContent = timeStr;
+            }, 1000);
+        }
+
+        function stopRecordingTimer(videoType) {
+            if (recordingTimers[videoType]) {
+                clearInterval(recordingTimers[videoType]);
+                delete recordingTimers[videoType];
+            }
+        }
+
+        function showRecordingIndicator() {
+            document.getElementById('recordingIndicator').style.display = 'block';
+        }
+
+        function hideRecordingIndicator() {
+            if (Object.keys(recordingTimers).length === 0) {
+                document.getElementById('recordingIndicator').style.display = 'none';
+            }
+        }
+
+        // Setup geolocation
+        function setupGeolocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(function(position) {
+                    document.getElementById('geoLat').value = position.coords.latitude;
+                    document.getElementById('geoLng').value = position.coords.longitude;
+                }, function(error) {
+                    console.log('Geolocation error:', error);
+                });
+            }
+        }
+
+        // Handle form submission
+        function handleFormSubmission(e) {
+            e.preventDefault();
+            
+            const messageDiv = document.getElementById('message');
+            const submitBtn = document.getElementById('submitBtn');
+            const progressBar = document.querySelector('.upload-progress');
+            
+            // Validate form
+            const regNo = document.getElementById('regNoInput').value.trim();
+            const hubLocation = document.getElementById('hubLocation').value.trim();
+            const cleaningDate = document.getElementById('cleaningDate').value;
+            
+            if (!regNo || !hubLocation || !cleaningDate) {
+                showMessage('Please fill in all required fields', 'error');
+                return;
+            }
+
+            // Check for videos (either uploaded or recorded)
+            const exteriorFile = document.getElementById('exteriorVideo').files[0];
+            const interiorFile = document.getElementById('interiorVideo').files[0];
+            const exteriorBlob = window.exteriorRecordedBlob;
+            const interiorBlob = window.interiorRecordedBlob;
+
+            if ((!exteriorFile && !exteriorBlob) || (!interiorFile && !interiorBlob)) {
+                showMessage('Please provide both exterior and interior videos (upload or record)', 'error');
+                return;
+            }
+
+            // Prepare form data
+            const formData = new FormData();
+            formData.append('reg_no', regNo);
+            formData.append('hub_location', hubLocation);
+            formData.append('cleaning_date', cleaningDate);
+
+            // Add exterior video
+            if (exteriorBlob) {
+                formData.append('exterior_video', exteriorBlob, 'exterior_recorded.webm');
+            } else {
+                formData.append('exterior_video', exteriorFile);
+            }
+
+            // Add interior video
+            if (interiorBlob) {
+                formData.append('interior_video', interiorBlob, 'interior_recorded.webm');
+            } else {
+                formData.append('interior_video', interiorFile);
+            }
+
+            // Add geolocation if available
+            const lat = document.getElementById('geoLat').value;
+            const lng = document.getElementById('geoLng').value;
+            if (lat && lng) {
+                formData.append('geo_lat', lat);
+                formData.append('geo_lng', lng);
+            }
+
+            // Show progress
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
+            progressBar.style.display = 'block';
+
+            // Submit using XMLHttpRequest for progress tracking
+            const xhr = new XMLHttpRequest();
+            
+            xhr.upload.addEventListener('progress', function(e) {
+                if (e.lengthComputable) {
+                    const percentComplete = (e.loaded / e.total) * 100;
+                    document.getElementById('progressBar').style.width = percentComplete + '%';
+                }
+            });
+
+            xhr.addEventListener('load', function() {
+                try {
+                    const result = JSON.parse(xhr.responseText);
+                    if (xhr.status === 200 && result.id) {
+                        showMessage('✅ Report submitted successfully!', 'success');
+                        resetForm();
+                        loadStats(); // Refresh stats
+                    } else {
+                        showMessage('❌ Error: ' + (result.error || 'Unknown error'), 'error');
+                    }
+                } catch (error) {
+                    showMessage('❌ Error processing response', 'error');
+                }
+                
+                // Reset UI
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Report';
+                progressBar.style.display = 'none';
+                document.getElementById('progressBar').style.width = '0%';
+            });
+
+            xhr.addEventListener('error', function() {
+                showMessage('❌ Network error occurred', 'error');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Report';
+                progressBar.style.display = 'none';
+            });
+
+            xhr.open('POST', '/submit');
+            xhr.send(formData);
+        }
+
+        // Utility functions
+        function showMessage(text, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = text;
+            messageDiv.className = 'message ' + type;
+            
+            // Auto-hide success messages
+            if (type === 'success') {
+                setTimeout(() => {
+                    messageDiv.textContent = '';
+                    messageDiv.className = 'message';
+                }, 5000);
+            }
+        }
+
+        function resetForm() {
+            document.getElementById('cleaningForm').reset();
+            document.getElementById('hubLocation').value = '';
+            document.getElementById('reg-feedback').textContent = '';
+            
+            // Reset recorded videos
+            window.exteriorRecordedBlob = null;
+            window.interiorRecordedBlob = null;
+            
+            // Reset video previews
+            document.getElementById('exteriorPreview').src = '';
+            document.getElementById('interiorPreview').src = '';
+            
+            // Reset recording UI
+            ['exterior', 'interior'].forEach(type => {
+                document.getElementById(type + 'Record').style.display = 'inline-flex';
+                d
