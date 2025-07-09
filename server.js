@@ -123,22 +123,22 @@ db.serialize(() => {
 async function syncHubsFromGoogleSheets() {
   try {
     if (!fs.existsSync("credentials.json")) {
-  console.log("❌ credentials.json not found. Skipping Sheets sync.");
-} else {
-  console.log("✅ credentials.json found. Starting Sheets sync...");
+      console.log("❌ credentials.json not found. Skipping Sheets sync.");
+      return; // Exit early if no credentials
+    }
 
-  const auth = new google.auth.GoogleAuth({
-    keyFile: 'credentials.json',
-    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-  });
+    console.log("✅ credentials.json found. Starting Sheets sync...");
 
+    const auth = new google.auth.GoogleAuth({
+      keyFile: 'credentials.json',
+      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+    });
 
     const sheets = google.sheets({ version: 'v4', auth });
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: '1Of8Wl0xnLdtQb2MLeaYXvw_ZX9RKI1o1yrhxNZlyhnM',
       range: 'Sheet1!A2:E',
     });
-  }
 
     const rows = response.data.values;
     
@@ -174,175 +174,121 @@ async function syncHubsFromGoogleSheets() {
                 const [name, location, yardManagerEmail, auditorEmail, groundTeamEmail] = row;
                 
                 if (location && name) {
-                  db.run(`INSERT INTO hubs (name, location, sheet_id) VALUES (?, ?, ?)`, 
-                    [name, location, '1Of8Wl0xnLdtQb2MLeaYXvw_ZX9RKI1o1yrhxNZlyhnM'], function(err) {
-                    if (err) {
-                      console.error(`❌ Hub sync error for ${name}:`, err.message);
-                    } else {
-                      const hubId = this.lastID;
-                      console.log(`✅ Created hub: ${name} (ID: ${hubId})`);
-                      
-                      // Assign users to the new hub
-                      if (yardManagerEmail && yardManagerEmail.trim()) {
-                        assignUserToHub(yardManagerEmail.trim(), hubId, 'yard_manager');
-                        console.log(`  → Assigned yard manager: ${yardManagerEmail}`);
-                      }
-                      if (auditorEmail && auditorEmail.trim()) {
-                        assignUserToHub(auditorEmail.trim(), hubId, 'auditor');
-                        console.log(`  → Assigned auditor: ${auditorEmail}`);
-                      }
-                      if (groundTeamEmail && groundTeamEmail.trim()) {
-                        assignUserToHub(groundTeamEmail.trim(), hubId, 'ground');
-                        console.log(`  → Assigned ground worker: ${groundTeamEmail}`);
-                      }
-
-                      // ✅ Google Sheets Sync
-                      if (!fs.existsSync("credentials.json")) {
-                        console.log("❌ credentials.json not found. Skipping Sheets sync.");
+                  db.run(
+                    `INSERT INTO hubs (name, location, sheet_id) VALUES (?, ?, ?)`,
+                    [name, location, '1Of8Wl0xnLdtQb2MLeaYXvw_ZX9RKI1o1yrhxNZlyhnM'],
+                    function (err) {
+                      if (err) {
+                        console.error(`❌ Hub sync error for ${name}:`, err.message);
                       } else {
-                        console.log("✅ credentials.json found. Syncing new hub to Google Sheets...");
+                        const hubId = this.lastID;
+                        console.log(`✅ Created hub: ${name} (ID: ${hubId})`);
 
-                        const auth = new google.auth.GoogleAuth({
-                          keyFile: "credentials.json",
-                          scopes: ["https://www.googleapis.com/auth/spreadsheets"]
-                        });
+                        // Assign users to the new hub
+                        if (yardManagerEmail && yardManagerEmail.trim()) {
+                          assignUserToHub(yardManagerEmail.trim(), hubId, 'yard_manager');
+                          console.log(`  → Assigned yard manager: ${yardManagerEmail}`);
+                        }
+                        if (auditorEmail && auditorEmail.trim()) {
+                          assignUserToHub(auditorEmail.trim(), hubId, 'auditor');
+                          console.log(`  → Assigned auditor: ${auditorEmail}`);
+                        }
+                        if (groundTeamEmail && groundTeamEmail.trim()) {
+                          assignUserToHub(groundTeamEmail.trim(), hubId, 'ground');
+                          console.log(`  → Assigned ground worker: ${groundTeamEmail}`);
+                        }
+                      }
 
-                        const sheets = google.sheets({ version: "v4", auth });
-
-                        const row = {
-                          values: [
-                            [name, location, hubId, yardManagerEmail || "", auditorEmail || "", groundTeamEmail || ""]
-                          ]
-                        };
-
-                        sheets.spreadsheets.values.append({
-                          spreadsheetId: '1Of8Wl0xnLdtQb2MLeaYXvw_ZX9RKI1o1yrhxNZlyhnM',
-                          range: 'Hubs!A:F',
-                          valueInputOption: 'RAW',
-                          resource: row
-                        }, (err, result) => {
+                      processedCount++;
+                      if (processedCount === rows.length) {
+                        db.run('COMMIT', (err) => {
                           if (err) {
-                            console.error(`❌ Google Sheets update failed for ${name}:`, err.message);
+                            console.error('❌ Commit error:', err);
+                            reject(err);
                           } else {
-                            console.log(`✅ Google Sheets updated with hub: ${name}`);
+                            console.log(`✅ Successfully imported ${rows.length} hubs with clean assignments`);
+                            resolve();
                           }
                         });
                       }
                     }
-
-                    processedCount++;
-                    if (processedCount === rows.length) {
-                      db.run('COMMIT', (err) => {
-                        if (err) {
-                          console.error('❌ Commit error:', err);
-                          reject(err);
-                        } else {
-                          console.log(`✅ Successfully imported ${rows.length} hubs with clean assignments`);
-                          resolve();
-                        }
-                      });
-                    }
-});
-
-              //     db.run(`INSERT INTO hubs (name, location, sheet_id) VALUES (?, ?, ?)`, 
-              //       [name, location, '1Of8Wl0xnLdtQb2MLeaYXvw_ZX9RKI1o1yrhxNZlyhnM'], function(err) {
-              //       if (err) {
-              //         console.error(`❌ Hub sync error for ${name}:`, err.message);
-              //       } else {
-              //         const hubId = this.lastID;
-              //         console.log(`✅ Created hub: ${name} (ID: ${hubId})`);
-                      
-              //         // Assign users to the new hub
-              //         if (yardManagerEmail && yardManagerEmail.trim()) {
-              //           assignUserToHub(yardManagerEmail.trim(), hubId, 'yard_manager');
-              //           console.log(`  → Assigned yard manager: ${yardManagerEmail}`);
-              //         }
-              //         if (auditorEmail && auditorEmail.trim()) {
-              //           assignUserToHub(auditorEmail.trim(), hubId, 'auditor');
-              //           console.log(`  → Assigned auditor: ${auditorEmail}`);
-              //         }
-              //         if (groundTeamEmail && groundTeamEmail.trim()) {
-              //           assignUserToHub(groundTeamEmail.trim(), hubId, 'ground');
-              //           console.log(`  → Assigned ground worker: ${groundTeamEmail}`);
-              //         }
-              //       }
-                    
-              //       processedCount++;
-              //       if (processedCount === rows.length) {
-              //         db.run('COMMIT', (err) => {
-              //           if (err) {
-              //             console.error('❌ Commit error:', err);
-              //             reject(err);
-              //           } else {
-              //             console.log(`✅ Successfully imported ${rows.length} hubs with clean assignments`);
-              //             resolve();
-              //           }
-              //         });
-              //       }
-              //     });
-              //   } else {
-              //     processedCount++;
-              //     if (processedCount === rows.length) {
-              //       db.run('COMMIT', (err) => {
-              //         if (err) {
-              //           console.error('❌ Commit error:', err);
-              //           reject(err);
-              //         } else {
-              //           console.log(`✅ Successfully imported ${rows.length} hubs with clean assignments`);
-              //           resolve();
-              //         }
-              //       });
-              //     }
-              //   }
-              // });
+                  );
+                } else {
+                  processedCount++;
+                  if (processedCount === rows.length) {
+                    db.run('COMMIT', (err) => {
+                      if (err) {
+                        console.error('❌ Commit error:', err);
+                        reject(err);
+                      } else {
+                        console.log(`✅ Successfully imported ${rows.length} hubs with clean assignments`);
+                        resolve();
+                      }
+                    });
+                  }
+                }
+              }); // Closed the forEach loop properly here
             } else {
               console.log('✅ No hubs found in sheet, sync completed');
               db.run('COMMIT');
               resolve();
             }
-          });
-        });
-      });
-    });
+          }); // Closed the DELETE FROM hubs callback
+        }); // Closed the DELETE FROM hub_assignments callback
+      }); // Closed db.serialize
+    }); // Closed Promise
   } catch (err) {
     console.error('❌ Google Sheets sync error:', err.message);
     throw err;
   }
 }
 
+
+// Assign user function (outside any try-catch)
 function assignUserToHub(email, hubId, role) {
   if (!email || !hubId) {
     console.log(`Skipping assignment: email=${email}, hubId=${hubId}`);
     return;
   }
-  
+
   db.get(`SELECT id FROM users WHERE email = ?`, [email], (err, user) => {
     if (err) {
       console.error(`Database error: ${err.message}`);
       return;
     }
-    
+
     if (user) {
-      db.run(`INSERT OR REPLACE INTO hub_assignments (hub_id, user_id, role) 
-              VALUES (?, ?, ?)`, [hubId, user.id, role], (err) => {
-        if (err) console.error(`Error assigning ${email} to hub:`, err);
-      });
+      db.run(
+        `INSERT OR REPLACE INTO hub_assignments (hub_id, user_id, role) VALUES (?, ?, ?)`,
+        [hubId, user.id, role],
+        (err) => {
+          if (err) console.error(`Error assigning ${email} to hub:`, err);
+        }
+      );
     } else {
       // Create user if not exists
-      db.run(`INSERT INTO users (email, role) VALUES (?, ?)`, [email, role], function(err) {
-        if (err) {
-          console.error(`Error creating user ${email}:`, err);
-          return;
+      db.run(
+        `INSERT INTO users (email, role) VALUES (?, ?)`,
+        [email, role],
+        function (err) {
+          if (err) {
+            console.error(`Error creating user ${email}:`, err);
+            return;
+          }
+          const userId = this.lastID;
+          db.run(
+            `INSERT OR REPLACE INTO hub_assignments (hub_id, user_id, role) VALUES (?, ?, ?)`,
+            [hubId, userId, role],
+            (err) => {
+              if (err) console.error(`Error assigning new user to hub:`, err);
+            }
+          );
         }
-        const userId = this.lastID;
-        db.run(`INSERT OR REPLACE INTO hub_assignments (hub_id, user_id, role) 
-                VALUES (?, ?, ?)`, [hubId, userId, role], (err) => {
-          if (err) console.error(`Error assigning new user to hub:`, err);
-        });
-      });
+      );
     }
   });
 }
+
 
 // Manual hub assignment for specific users
 async function assignSpecificHubs() {
@@ -494,14 +440,13 @@ app.get('/yard-manager-dashboard-stats', requireAuth('yard_manager'), (req, res)
                         if (err) console.error(err);
                         stats.avg_rating = row && row.avg_rating ? Math.round(row.avg_rating * 10) / 10 : 0;
                         res.json(stats);
-                    }); // Added missing closing parenthesis and semicolon
-                }); // Added missing closing parenthesis and semicolon
-            }); // Added missing closing parenthesis and semicolon
-        }); // Added missing closing parenthesis and semicolon
-    }); // Added missing closing parenthesis and semicolon
+                    }); // Fixed this closing
+                }); // Fixed this closing
+            }); // Fixed this closing
+        }); // Fixed this closing
+    }); // Fixed this closing
   });
 });
-
 // Get all yard managers for admin assignment
 app.get('/admin-yard-managers', requireAuth('admin'), (req, res) => {
     db.all(`
