@@ -3478,5 +3478,6 @@ app.get('/ground-stats', requireAuth('ground'), (req, res) => {
 });
 
 // Start server
+console.log("✅ Server is ready and listening...");
 app.listen(port, () => console.log(`🚀 Server running at http://localhost:${port}`));
 });
