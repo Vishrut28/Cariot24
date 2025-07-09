@@ -976,6 +976,14 @@ app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
+app.get("/debug-index", (req, res) => {
+  const indexPath = path.join(__dirname, "public", "index.html");
+  if (fs.existsSync(indexPath)) {
+    res.send("✅ index.html exists at: " + indexPath);
+  } else {
+    res.status(404).send("❌ index.html NOT found at: " + indexPath);
+  }
+});
 
 // Start the server
 app.listen(port, '0.0.0.0', () => {
