@@ -122,21 +122,23 @@ db.serialize(() => {
 // Function to sync hubs from Google Sheets
 async function syncHubsFromGoogleSheets() {
   try {
-    if (!fs.existsSync('credentials.json')) {
-      console.error('❌ credentials.json file not found. Google Sheets sync skipped.');
-      return;
-    }
-    
-    const auth = new google.auth.GoogleAuth({
-      keyFile: 'credentials.json',
-      scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
-    });
+    if (!fs.existsSync("credentials.json")) {
+  console.log("❌ credentials.json not found. Skipping Sheets sync.");
+} else {
+  console.log("✅ credentials.json found. Starting Sheets sync...");
+
+  const auth = new google.auth.GoogleAuth({
+    keyFile: 'credentials.json',
+    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+  });
+
 
     const sheets = google.sheets({ version: 'v4', auth });
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: '1Of8Wl0xnLdtQb2MLeaYXvw_ZX9RKI1o1yrhxNZlyhnM',
       range: 'Sheet1!A2:E',
     });
+  }
 
     const rows = response.data.values;
     
@@ -193,8 +195,41 @@ async function syncHubsFromGoogleSheets() {
                         assignUserToHub(groundTeamEmail.trim(), hubId, 'ground');
                         console.log(`  → Assigned ground worker: ${groundTeamEmail}`);
                       }
+
+                      // ✅ Google Sheets Sync
+                      if (!fs.existsSync("credentials.json")) {
+                        console.log("❌ credentials.json not found. Skipping Sheets sync.");
+                      } else {
+                        console.log("✅ credentials.json found. Syncing new hub to Google Sheets...");
+
+                        const auth = new google.auth.GoogleAuth({
+                          keyFile: "credentials.json",
+                          scopes: ["https://www.googleapis.com/auth/spreadsheets"]
+                        });
+
+                        const sheets = google.sheets({ version: "v4", auth });
+
+                        const row = {
+                          values: [
+                            [name, location, hubId, yardManagerEmail || "", auditorEmail || "", groundTeamEmail || ""]
+                          ]
+                        };
+
+                        sheets.spreadsheets.values.append({
+                          spreadsheetId: '1Of8Wl0xnLdtQb2MLeaYXvw_ZX9RKI1o1yrhxNZlyhnM',
+                          range: 'Hubs!A:F',
+                          valueInputOption: 'RAW',
+                          resource: row
+                        }, (err, result) => {
+                          if (err) {
+                            console.error(`❌ Google Sheets update failed for ${name}:`, err.message);
+                          } else {
+                            console.log(`✅ Google Sheets updated with hub: ${name}`);
+                          }
+                        });
+                      }
                     }
-                    
+
                     processedCount++;
                     if (processedCount === rows.length) {
                       db.run('COMMIT', (err) => {
@@ -207,22 +242,59 @@ async function syncHubsFromGoogleSheets() {
                         }
                       });
                     }
-                  });
-                } else {
-                  processedCount++;
-                  if (processedCount === rows.length) {
-                    db.run('COMMIT', (err) => {
-                      if (err) {
-                        console.error('❌ Commit error:', err);
-                        reject(err);
-                      } else {
-                        console.log(`✅ Successfully imported ${rows.length} hubs with clean assignments`);
-                        resolve();
-                      }
-                    });
-                  }
-                }
-              });
+});
+
+              //     db.run(`INSERT INTO hubs (name, location, sheet_id) VALUES (?, ?, ?)`, 
+              //       [name, location, '1Of8Wl0xnLdtQb2MLeaYXvw_ZX9RKI1o1yrhxNZlyhnM'], function(err) {
+              //       if (err) {
+              //         console.error(`❌ Hub sync error for ${name}:`, err.message);
+              //       } else {
+              //         const hubId = this.lastID;
+              //         console.log(`✅ Created hub: ${name} (ID: ${hubId})`);
+                      
+              //         // Assign users to the new hub
+              //         if (yardManagerEmail && yardManagerEmail.trim()) {
+              //           assignUserToHub(yardManagerEmail.trim(), hubId, 'yard_manager');
+              //           console.log(`  → Assigned yard manager: ${yardManagerEmail}`);
+              //         }
+              //         if (auditorEmail && auditorEmail.trim()) {
+              //           assignUserToHub(auditorEmail.trim(), hubId, 'auditor');
+              //           console.log(`  → Assigned auditor: ${auditorEmail}`);
+              //         }
+              //         if (groundTeamEmail && groundTeamEmail.trim()) {
+              //           assignUserToHub(groundTeamEmail.trim(), hubId, 'ground');
+              //           console.log(`  → Assigned ground worker: ${groundTeamEmail}`);
+              //         }
+              //       }
+                    
+              //       processedCount++;
+              //       if (processedCount === rows.length) {
+              //         db.run('COMMIT', (err) => {
+              //           if (err) {
+              //             console.error('❌ Commit error:', err);
+              //             reject(err);
+              //           } else {
+              //             console.log(`✅ Successfully imported ${rows.length} hubs with clean assignments`);
+              //             resolve();
+              //           }
+              //         });
+              //       }
+              //     });
+              //   } else {
+              //     processedCount++;
+              //     if (processedCount === rows.length) {
+              //       db.run('COMMIT', (err) => {
+              //         if (err) {
+              //           console.error('❌ Commit error:', err);
+              //           reject(err);
+              //         } else {
+              //           console.log(`✅ Successfully imported ${rows.length} hubs with clean assignments`);
+              //           resolve();
+              //         }
+              //       });
+              //     }
+              //   }
+              // });
             } else {
               console.log('✅ No hubs found in sheet, sync completed');
               db.run('COMMIT');
