@@ -3477,6 +3477,10 @@ app.get('/ground-stats', requireAuth('ground'), (req, res) => {
   });
 });
 
+app.get("/", (req, res) => {
+  res.send("✅ Backend is live and working!");
+});
+
 // Start server
 console.log("✅ Server is ready and listening...");
 app.listen(port, () => console.log(`🚀 Server running at http://localhost:${port}`));
