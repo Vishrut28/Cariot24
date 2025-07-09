@@ -14,7 +14,7 @@ const app = express();
 // const path = require('path');
 app.use(express.static(path.join(__dirname)));
 
-const port = 3000;
+const port = process.env.PORT || 3000;
 const uploadDir = path.join(__dirname, 'uploads');
 
 // Ensure uploads folder exists
@@ -978,10 +978,11 @@ app.get("/", (req, res) => {
 
 
 // Start the server
-app.listen(port, () => {
-  console.log(`🚀 Server running on port ${port}`);
+app.listen(port, '0.0.0.0', () => {
+  console.log(`🚀 Server running at http://0.0.0.0:${port}`);
 
   db.serialize(() => {
     // Optional startup DB logic
   });
 });
+
