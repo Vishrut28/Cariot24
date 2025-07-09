@@ -11,6 +11,9 @@ const CLIENT_ID = '284150378430-p1c7c213dtj12mnmmmr349i7m0mievlj.apps.googleuser
 const client = new OAuth2Client(CLIENT_ID);
 
 const app = express();
+// const path = require('path');
+app.use(express.static(path.join(__dirname)));
+
 const port = 3000;
 const uploadDir = path.join(__dirname, 'uploads');
 
@@ -953,8 +956,9 @@ app.get('/ground-stats', requireAuth('ground'), (req, res) => {
 
 // Health check route
 app.get("/", (req, res) => {
-  res.send("✅ Backend is live and working!");
+  res.sendFile(path.join(__dirname, "index.html"));
 });
+
 
 // Start the server
 app.listen(port, () => {
