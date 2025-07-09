@@ -985,6 +985,15 @@ app.get("/debug-index", (req, res) => {
   }
 });
 
+
+process.on('uncaughtException', function (err) {
+  console.error('🔥 Uncaught Exception:', err.stack || err);
+});
+
+process.on('unhandledRejection', function (reason, p) {
+  console.error('🔥 Unhandled Rejection at:', p, 'reason:', reason);
+});
+
 // Start the server
 app.listen(port, '0.0.0.0', () => {
   console.log(`🚀 Server running at http://0.0.0.0:${port}`);
