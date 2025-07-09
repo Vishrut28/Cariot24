@@ -973,7 +973,7 @@ app.get('/ground-stats', requireAuth('ground'), (req, res) => {
 
 // Health check route
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+  res.sendFile(path.join(__dirname, "public", "index.html")); // ✅
 });
 
 
